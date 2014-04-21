@@ -3,7 +3,7 @@ package encode;
 public class CharNode implements INode {
 
 	public INode parent;
-	public char c;
+	public int c;
 	public int sum;
 
 	public CharNode(char ch, int sum){
@@ -32,7 +32,7 @@ public class CharNode implements INode {
 	}
 
 	@Override
-	public Character getChar() {
+	public Integer getChar() {
 		return c;
 	}
 

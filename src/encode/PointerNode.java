@@ -13,8 +13,6 @@ public class PointerNode implements INode{
 		this.sum = leftChild.getSum() + rightChild.getSum();
 	}
 	
-	
-	
 	@Override
 	public INode getParent() {
 		return this.parent;
@@ -36,7 +34,7 @@ public class PointerNode implements INode{
 	}
 
 	@Override
-	public Character getChar() {
+	public Integer getChar() {
 		return null;
 	}
 
@@ -47,14 +45,12 @@ public class PointerNode implements INode{
 
 	@Override
 	public void setLeftChild(INode leftChild) {
-		System.out.println("setting childs not allowed for pointer Node!");
+		System.out.println("setting childs not allowed for pointer Node! see Constructor");
 	}
 
 	@Override
 	public void setRightChild(INode rightChild) {
-		System.out.println("setting childs not allowed for pointer Node!");
+		System.out.println("setting childs not allowed for pointer Node! see Constructor");
 	}
-	
-	
 	
 }

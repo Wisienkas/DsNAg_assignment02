@@ -1,0 +1,22 @@
+
+up vote
+1
+down vote
+When you just specify "textfile.txt" the operating system will look in the program's working directory for that file.
+
+You can specify the absolute path to the file with something like new FileInputStream("C:\\full\\path\\to\\file.txt")
+
+Also if you want to know the directory your program is running in, try this: System.out.println(new File(".").getAbsolutePath())
+
+share|edit
+answered Nov 29 '10 at 10:06
+
+daveb
+22.7k22332
+add comment
+up vote
+1
+down vote
+Your new FileInputStream("textfile.txt") is correct. If it's throwing that exception, there is no textfile.txt in the current directory when you run the program. Are you sure the file's name isn't actually testfile.txt (note the s, not x, in the third position).
+
+Off-topic: But your earlier deleted question asked how to read a file line by line (I didn't think you needed to delete it, FWIW). On the assumption you're still a beginner and getting the hang of things, a pointer: You probably don't want to be using FileInputStream, which is for binary files, but instead use the Reader set of interfaces/classes in java.io (including FileReader). Also, whenever possible, declare your variables using the interface, even when initializing them to a specific class, so for instance, Reader r = new FileReader("textfile.txt") (rather than FileReader r = ...).

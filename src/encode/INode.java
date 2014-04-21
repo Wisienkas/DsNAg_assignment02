@@ -9,6 +9,6 @@ public interface INode {
 	void setLeftChild(INode leftChild);
 	void setRightChild(INode rightChild);
 	int getSum();
-	Character getChar();
+	Integer getChar();
 	
 }
