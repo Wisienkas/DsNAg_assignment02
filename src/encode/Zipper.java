@@ -1,76 +1,114 @@
 package encode;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
 
 public class Zipper {
+	
+	public static void unzipFile(File in, File out) throws IOException {
+		System.out.println("Unzipping requested file: " + in.getName());
+		System.out.println("output file:" + out.getName());
+		long time = System.currentTimeMillis();
+		
+		int[] charsmap = new int[ByteQueue.headerSize];
+		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(in), "UTF-8"));
+		// reads in header
+		int total = getCharMap(br, charsmap);
+		// makes tree
+		INode root = makeTree(charsmap);
+		getCharMap(root);
 
-	public static void main(String[] args) {
-		File fileIn = new File("test.txt");
-		if(!fileIn.exists()){
-			System.out.println("file don't exists! exiting...");
-			System.exit(1);
-		}
-		File fileOut = new File("testout.txt");
-		try {
-			zipFile(fileIn, fileOut);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		// decoding to new file 
+		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(out), "UTF-8"));
+		ByteQueue bq = new ByteQueue(root);
+		bq.decodeToFile(br, bw);
+		System.out.println("Wrote new file... took: " + (System.currentTimeMillis() - time) + " ms!");
 	}
 	
+	private static int getCharMap(BufferedReader br, int[] charsmap) throws IOException {
+		int input;
+		for (int i = 0; i < ByteQueue.headerSize; i++) {
+			int[] numbers = new int[4];
+			for (int j = 0; j < 4; j++) {
+				input = br.read();
+				if(input == -1){
+					throw new IOException("End of file, not a zipped file!");
+				}
+				numbers[j] = input;
+			}
+			int Multiplier = 256 * 256 * 256;
+			int total = 0;
+			for (int j = 0; j < numbers.length; j++) {
+				total += numbers[j] * Multiplier;
+				Multiplier /= 256;
+			}
+			charsmap[i] = total;
+		}
+		
+		// to get total number
+		int[] numbers = new int[4];
+		for (int j = 0; j < 4; j++) {
+			input = br.read();
+			if(input == -1){
+				throw new IOException("End of file, not a zipped file!");
+			}
+			numbers[j] = input;
+		}
+		int Multiplier = 256 * 256 * 256;
+		int total = 0;
+		for (int j = 0; j < numbers.length; j++) {
+			total = numbers[j] * Multiplier;
+			Multiplier /= 256;
+		}
+		return total;
+	}
+
 	public static void zipFile(File in, File out) throws IOException {
-		HashMap<Integer, Counter> charsMap = new HashMap<>();
-		FileInputStream fis = new FileInputStream(in);
+		System.out.println("Zipping requested file: " + in.getName());
+		System.out.println("output file:" + out.getName());
+		long time = System.currentTimeMillis();
+		
+		int[] charsmap = new int[ByteQueue.headerSize];
+		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(in), "UTF-8"));
+		
 		int input;
 		try {
 			// Reads occounrences
-			while ((input = fis.read()) != -1) {
-				if (charsMap.containsKey(input)) {
-					charsMap.get(input).count++;
-				} else {
-					charsMap.put(input, new Counter());
-				}
+			while ((input = br.read()) != -1) {
+				charsmap[input]++;
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		System.out.println("Making tree of roots");
-		INode root = makeTree(charsMap); // works correct now
+		INode root = makeTree(charsmap); // works correct now
 		System.out.println("Constructing char to code map!");
 		Map<Integer, boolean[]> map = getCharMap(root); // works correct now
 		System.out.println("Writing outputfile");
-		writeFile(map, out, in);
+		writeFile(map, out, in, charsmap);
+		System.out.println("Wrote new file... took: " + (System.currentTimeMillis() - time) + " ms!");
 	}
 
-	private static void writeFile(Map<Integer, boolean[]> map, File out, File in) throws IOException {
-		FileOutputStream fos = new FileOutputStream(out);
-		FileInputStream fis = new FileInputStream(in);
+	private static void writeFile(Map<Integer, boolean[]> map, File out, File in, int[] charsmap) throws IOException {
+		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(out), "UTF-8"));
+		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(in), "UTF-8"));
 		ByteQueue bq = new ByteQueue(map);
-		bq.writeToFile(fis, fos);
-	}
-
-	private static void printmap(Map<Integer, boolean[]> map) {
-		for (int c : map.keySet()) {
-			System.out.println("char: " + c + "\tCode: " + printBoolArray(map.get(c)));
-		}
-	}
-
-	private static String printBoolArray(boolean[] bs) {
-		String s = "";
-		for (int i = 0; i < bs.length; i++) {
-			s += bs[i] ? "1" : "0";
-		}
-		return s;
+		bq.writeHeaderToFile(bw, charsmap);
+		bq.writeToFile(br, bw);
+		bw.flush();
+		bw.close();
+		br.close();
 	}
 	
 	private static String printBoolArray(ArrayList<Boolean> A) {
@@ -121,16 +159,11 @@ public class Zipper {
 		result.put(c, b_arr);
 	}
 
-	private static INode makeTree(HashMap<Integer, Counter> charsMap) {
+	private static INode makeTree(int[] charsMap) {
 		ArrayList<INode> nodeMinHeap = new ArrayList<INode>();
 		insertValues(charsMap, nodeMinHeap);
 		Heapify(nodeMinHeap);
-		System.out.println("start size of nodeMinHeap: " + nodeMinHeap.size());
 		while(nodeMinHeap.size() > 1){
-			System.out.println("size of heap: " + nodeMinHeap.size());
-			if(nodeMinHeap.size() == 2){
-				System.out.println("size 2 :O");
-			}
 			makeMoreTree(nodeMinHeap);
 		}
 		System.out.println("Assembled optimal tree!");
@@ -228,11 +261,12 @@ public class Zipper {
 		return result;
 	}
 
-	private static void insertValues(HashMap<Integer, Counter> charsMap,
+	private static void insertValues(int[] charsMap,
 			ArrayList<INode> nodeMinHeap) {
-		for (Integer i : charsMap.keySet()) {
-			int in = i;
-			nodeMinHeap.add(new CharNode((char)(in), charsMap.get(i).count));
+		for (int i = 0; i < charsMap.length; i++) {
+			if(charsMap[i] != 0){
+				nodeMinHeap.add(new CharNode(i, charsMap[i]));
+			}
 		}
 	}
 

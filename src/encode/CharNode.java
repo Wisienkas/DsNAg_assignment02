@@ -6,7 +6,7 @@ public class CharNode implements INode {
 	public int c;
 	public int sum;
 
-	public CharNode(char ch, int sum){
+	public CharNode(int ch, int sum){
 		this.c = ch;
 		this.sum = sum;
 	}
