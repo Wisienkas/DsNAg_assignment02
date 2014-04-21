@@ -25,14 +25,17 @@ public class Zipper {
 		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(in), "UTF-8"));
 		// reads in header
 		int total = getCharMap(br, charsmap);
+		br.close();
 		// makes tree
 		INode root = makeTree(charsmap);
 		getCharMap(root);
 
 		// decoding to new file 
 		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(out), "UTF-8"));
+		br = new BufferedReader(new InputStreamReader(new FileInputStream(in), "UTF-8"));
+		br.skip(ByteQueue.headerSize * 4 + 4);
 		ByteQueue bq = new ByteQueue(root);
-		bq.decodeToFile(br, bw);
+		bq.decodeToFile(br, bw, total);
 		System.out.println("Wrote new file... took: " + (System.currentTimeMillis() - time) + " ms!");
 	}
 	
@@ -44,6 +47,10 @@ public class Zipper {
 				input = br.read();
 				if(input == -1){
 					throw new IOException("End of file, not a zipped file!");
+				}
+				if(input != 0){
+					input++;
+					input--;
 				}
 				numbers[j] = input;
 			}
@@ -68,9 +75,11 @@ public class Zipper {
 		int Multiplier = 256 * 256 * 256;
 		int total = 0;
 		for (int j = 0; j < numbers.length; j++) {
-			total = numbers[j] * Multiplier;
+			System.out.println(numbers[j]);
+			total += numbers[j] * Multiplier;
 			Multiplier /= 256;
 		}
+		System.out.println("total length: " + total);
 		return total;
 	}
 

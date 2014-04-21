@@ -24,7 +24,7 @@ public class BitObject {
 	
 	public boolean decrease(){
 		if(number / modifier > 0){
-			number -= (number / modifier);
+			number -= modifier;
 			modifier /= 2;
 			return true;
 		}

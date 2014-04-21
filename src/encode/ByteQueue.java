@@ -31,16 +31,28 @@ public class ByteQueue {
 		this.queue = new boolean[ByteQueue.chunkSize * 2]; // allow for bufferzone
 	}
 	
-	public void decodeToFile(BufferedReader br, BufferedWriter bw) throws IOException{
+	public void decodeToFile(BufferedReader br, BufferedWriter bw, int total) throws IOException{
 		int input;
 		boolean[] new_bits;
-		while ((input = br.read()) != -1) {
+		while ((input = br.read()) != -1 && total > 0) {
+			if(total <= 0){
+				System.out.println("stopped due to max words!");
+			}
 			new_bits = byteToBooleans(input);
 			addToQueue(new_bits);
 			while(index > chunkSize){
 				writeNextChar(bw);
+				total--;
 			}
+			bw.flush();
 		}
+		System.out.println("no more to read in, doing rest of the work! total: " + total);
+		System.out.println("index size: " + index);
+		while(index > 0 && total > 0){
+			writeNextChar(bw);
+			total--;
+		}
+		System.out.println("index size: " + index);
 		br.close();
 		bw.flush();
 		bw.close();
@@ -63,24 +75,24 @@ public class ByteQueue {
 		moveBits(count);
 	}
 
-	public void writeToFile(BufferedReader fis, BufferedWriter fos) throws IOException{
+	public void writeToFile(BufferedReader br, BufferedWriter bw) throws IOException{
 		int input;
 		boolean[] new_bits;
-		while ((input = fis.read()) != -1) {
+		while ((input = br.read()) != -1) {
 			new_bits = map.get(input);
 			addToQueue(new_bits); // adding to queue
 			new_bits = null; // unsetting
 			if(index > chunkSize){
-				writeChunk(fos);
+				writeChunk(bw);
 			}
 		}
 		for (int i = index; i < ByteQueue.chunkSize; i++) {
 			this.queue[i] = false;
 		}
-		writeChunk(fos); // adding last few bytes
+		writeChunk(bw); // adding last few bytes
 	}
 
-	private void writeChunk(BufferedWriter fos) throws IOException {
+	private void writeChunk(BufferedWriter bw) throws IOException {
 		int[] bytes = new int[chunkSize / 8];
 		for (int i = 0; i < bytes.length; i++) {
 			BitObject bo = new BitObject();
@@ -90,7 +102,7 @@ public class ByteQueue {
 			bytes[i] = bo.getNumber();
 		}
 		for (int i = 0; i < bytes.length; i++) {
-			fos.write(bytes[i]);
+			bw.write(bytes[i]);
 		}
 		moveBits();
 	}
@@ -120,7 +132,7 @@ public class ByteQueue {
 		}
 	}
 
-	public void writeHeaderToFile(BufferedWriter fos, int[] charsmap) throws IOException {
+	public void writeHeaderToFile(BufferedWriter bw, int[] charsmap) throws IOException {
 		System.out.println("Writing header");
 		int total = 0;
 		for (int i = 0; i < ByteQueue.headerSize; i++) {
@@ -128,10 +140,15 @@ public class ByteQueue {
 			integerToBytes(charsmap[i], numbers);
 			total += charsmap[i];
 			for (int j = 0; j < numbers.length; j++) {
-				fos.write(numbers[j]);
+				bw.write(numbers[j]);
 			}
 		}
-		fos.write(total);
+		int[] totalus = new int[4];
+		integerToBytes(total, totalus);
+		for (int i = 0; i < totalus.length; i++) {
+			bw.write(totalus[i]);
+		}
+		System.out.println("total length: " + total);
 	}
 
 	private void integerToBytes(int number, int[] array) {
